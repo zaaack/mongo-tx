@@ -1,0 +1,45 @@
+{
+  "name": "mongo-tx",
+  "version": "0.0.2",
+  "description": "A flexible & extensible mongodb transaction library",
+  "main": "lib/tx-manager.js",
+  "scripts": {
+    "build": "cross-env NODE_ENV=production babel -d ./lib -s false -D ./src",
+    "test": "cross-env NODE_ENV=development DEBUG=mongo-tx* ava --serial",
+    "cover": "cross-env NODE_ENV=development nyc ava --serial"
+  },
+  "author": "zaaack",
+  "repository": "zaaack/mongo-tx",
+  "license": "ISC",
+  "dependencies": {
+    "mongodb": "^2.2.22",
+    "mongomq": "jdarling/MongoMQ",
+    "pre-commit": "^1.2.2"
+  },
+  "precommit": ["build"],
+  "devDependencies": {
+    "ava": "^0.17.0",
+    "babel-core": "^6.18.2",
+    "babel-plugin-transform-class-properties": "^6.16.0",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-plugin-transform-runtime": "^6.15.0",
+    "babel-polyfill": "^6.16.0",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-es2015-node6": "^0.3.0",
+    "babel-preset-stage-0": "^6.16.0",
+    "babel-register": "^6.16.3",
+    "babel-runtime": "^6.18.0",
+    "cross-env": "^3.1.3",
+    "debug": "^2.6.0",
+    "lodash.result": "^4.5.2",
+    "mongorito": "https://github.com/zaaack/mongorito",
+    "nyc": "^10.1.2"
+  },
+  "ava": {
+    "files": [
+      "test/**/test.*.js"
+    ],
+    "require": "babel-register",
+    "babel": "inherit"
+  }
+}
