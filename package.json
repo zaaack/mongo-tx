@@ -13,8 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "mongodb": "^2.2.22",
-    "mongomq": "jdarling/MongoMQ",
-    "pre-commit": "^1.2.2"
+    "mongomq": "jdarling/MongoMQ"
   },
   "precommit": ["build"],
   "devDependencies": {
@@ -33,7 +32,8 @@
     "debug": "^2.6.0",
     "lodash.result": "^4.5.2",
     "mongorito": "https://github.com/zaaack/mongorito",
-    "nyc": "^10.1.2"
+    "nyc": "^10.1.2",
+    "pre-commit": "^1.2.2"
   },
   "ava": {
     "files": [
