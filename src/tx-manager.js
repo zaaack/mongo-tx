@@ -77,7 +77,7 @@ class TxManager {
       try {
         await this.commit(this.options.retry)
       } catch (e) {
-        console.error(new CommitError('tx: ' + this.tx.name, e))
+        throw new CommitError('tx: ' + this.tx.name, e)
       }
     } catch (e) {
       try {

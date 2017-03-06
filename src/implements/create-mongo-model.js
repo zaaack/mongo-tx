@@ -55,14 +55,22 @@ export default ({
         const col = await this.getCol()
         const results = await col.findOneAndUpdate(match, updateDocument, options)
         debug('results', results)
-        return results.value
+        if (results.ok) {
+          return results.value
+        } else {
+          debug('results not ok', results)
+        }
+        return null
       },
 
       async findOneAndRemove(match, updateDocument, options) {
         const col = await this.getCol()
         const results = await col.findOneAndDelete(match, updateDocument, options)
         debug('findOneAndRemove results', results)
-        return results.value
+        if (results.ok) {
+          return results.value
+        }
+        return null
       },
     }
   }
