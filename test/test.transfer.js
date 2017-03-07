@@ -1,10 +1,10 @@
 import test from 'ava'
 import Mongorito, { Model } from 'mongorito'
-import mongoTx from '../lib/tx-manager'
-import { LockedError } from '../lib/errors'
-import createMongoritoModel from '../lib/implements/create-mongorito-model'
-import createMongoLock from '../lib/implements/create-mongo-lock'
-import createMongoMQ from '../lib/implements/create-mongo-mq'
+import mongoTx from '../src/tx-manager'
+import { LockedError } from '../src/errors'
+import createMongoritoModel from '../src/implements/create-mongorito-model'
+import createMongoLock from '../src/implements/create-mongo-lock'
+import createMongoMQ from '../src/implements/create-mongo-mq'
 
 const db = new Mongorito('localhost/mongo_tx_test')
 let createTx
@@ -13,13 +13,13 @@ class Accounts extends Model {
 
 class Txs extends Model {
   static collection() {
-    return '__tx_manager'
+    return 'tx_manager'
   }
 }
 
 class Locks extends Model {
   static collection() {
-    return '__tx_locks'
+    return 'tx_locks'
   }
 }
 
@@ -119,15 +119,18 @@ test('test locked wait', async t => {
     createLock: createMongoLock({ db: nativeDb, wait: true }),
   })
   const tasks = []
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 20; i++) {
     tasks.push(transfer(createWaitTx))
   }
+  console.time('test locked wait')
   await Promise.all(tasks)
+  console.log('=========================')
+  console.timeEnd('test locked wait')
 
   const acc1 = await Accounts.findOne({name: 'u1'})
   const acc2 = await Accounts.findOne({name: 'u2'})
-  t.is(acc1.get('money'), 200, 'u1\'s money should be 200')
-  t.is(acc2.get('money'), 1800, 'u2\'s money should be 1800')
+  t.is(acc1.get('money'), -1300, 'u1\'s money should be -1300')
+  t.is(acc2.get('money'), 3300, 'u2\'s money should be 3300')
 })
 
 test('test rollback', async t => {
@@ -136,8 +139,8 @@ test('test rollback', async t => {
 
   const acc1 = await Accounts.findOne({name: 'u1'})
   const acc2 = await Accounts.findOne({name: 'u2'})
-  t.is(acc1.get('money'), 200, 'u1\'s money should be 200')
-  t.is(acc2.get('money'), 1800, 'u2\'s money should be 1800')
+  t.is(acc1.get('money'), -1300, 'u1\'s money should be -1300')
+  t.is(acc2.get('money'), 3300, 'u2\'s money should be 3300')
 })
 
  // TODO: test crash
@@ -147,6 +150,6 @@ test('test crash', async t => {
 
   const acc1 = await Accounts.findOne({name: 'u1'})
   const acc2 = await Accounts.findOne({name: 'u2'})
-  t.is(acc1.get('money'), 200, 'u1\'s money should be 200')
-  t.is(acc2.get('money'), 1800, 'u2\'s money should be 1800')
+  t.is(acc1.get('money'), -1300, 'u1\'s money should be -1300')
+  t.is(acc2.get('money'), 3300, 'u2\'s money should be 3300')
 })

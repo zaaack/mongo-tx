@@ -9,7 +9,7 @@ export default class ModelWrapper {
     const { tx, createLock, txModel, txTimeout } = options
     this.tx = tx
     this.txModel = txModel
-    this.createLock = (id) => createLock(`document:${model.name()}__${id}`, txTimeout)
+    this.createLock = (id) => createLock(`document:${model.name()}_${id}`, txTimeout)
     this.locks = {}
   }
 
@@ -23,7 +23,7 @@ export default class ModelWrapper {
 
   async snapshot(doc, action = 'update') {
     const txId = this.tx._id
-    if (this.tx.snapshots[`${this.name()}.${doc.id}`]) {
+    if (this.tx.snapshots[`${this.name()}_${doc._id}`]) {
       return
     }
     this.tx = await this.txModel.findOneAndUpdate({ _id: txId }, {
@@ -37,6 +37,7 @@ export default class ModelWrapper {
     }, {
       returnOriginal: false,
     })
+    debug('this.tx', this.tx)
   }
 
   async findOne(match) {
@@ -101,9 +102,7 @@ export default class ModelWrapper {
     const { snapshots: snaps } = this.tx
     for (let snapId in snaps) {
       const { doc } = snaps[snapId]
-      debug('remove snap', doc._id)
       await this.removeSnap(doc._id)
-      debug('release', doc._id)
       await this.release(doc._id)
     }
   }
@@ -115,8 +114,7 @@ export default class ModelWrapper {
       try {
         switch (action) {
           case 'create':
-            const ret = await this.model.findOneAndRemove({_id: doc._id}, doc)
-            debug('findOneAndRemove ret', ret)
+            await this.model.findOneAndRemove({_id: doc._id})
             break
           case 'update':
             await this.model.findOneAndUpdate({_id: doc._id}, doc)

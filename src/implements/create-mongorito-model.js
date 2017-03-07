@@ -72,16 +72,14 @@ export default ({
       async findOneAndUpdate(match, updateDocument, options) {
         const col = await MongoritoModel.dbCollection()
         const results = await col.findOneAndUpdate(match, updateDocument, options)
-        debug('results', results)
         if (results.ok) {
           return results.value
         }
       },
 
-      async findOneAndRemove(match, updateDocument, options) {
+      async findOneAndRemove(match, options) {
         const col = await MongoritoModel.dbCollection()
-        const results = await col.findOneAndDelete(match, updateDocument, options)
-        debug('findOneAndRemove results', results)
+        const results = await col.findOneAndDelete(match, options)
         if (results.ok) {
           return results.value
         }

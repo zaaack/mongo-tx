@@ -3,7 +3,7 @@ import { CommitError, RollbackError, RetryableError, LockedError } from './error
 import { sleep, debug, randomStr } from './utils'
 
 const defaults = {
-  txModelName: '__tx_manager',
+  txModelName: 'tx_manager',
   createModel: null,
   createLock: null,
   txTimeout: 0,
