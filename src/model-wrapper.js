@@ -9,8 +9,13 @@ export default class ModelWrapper {
     const { tx, createLock, txModel, txTimeout } = options
     this.tx = tx
     this.txModel = txModel
-    this.createLock = (id) => createLock(`document:${model.name()}_${id}`, txTimeout)
+    this.createLock = (id) => this.constructor.createDocLock(model.name(), id, options)
     this.locks = {}
+  }
+
+  static createDocLock(colName, docId, options = this.options) {
+    const { createLock } = options
+    return createLock(`document:${colName}_${docId}`)
   }
 
   name() {

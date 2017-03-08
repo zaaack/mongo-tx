@@ -41,7 +41,7 @@ test.before(async t => {
       db: nativeDb,
       queue: createMongoMQ({
         databaseName: db.databaseName,
-        queueCollection: '__mongomq',
+        queueCollection: 'tx_mongomq',
       }),
     }),
   })

@@ -95,7 +95,7 @@ class TxManager {
         debug('tx:', this.name, 'retry', fn.name, i)
         await fn()
       } catch (e) {
-        if (e instanceof RetryableError) {
+        if (i < retry - 1) {
           console.error(e)
           await sleep(retryInterval)
           continue
@@ -143,7 +143,7 @@ class TxManager {
  * fix transactions after a crash, rollback all rollingback, commit all committing transactions.
  * @return
  */
-export async function fixCrash() {
+async function fixCrash() {
   let { createModel, createLock, txModelName } = this.options
   _txModel = _txModel || createModel(txModelName)
   const txModel = _txModel
@@ -166,6 +166,10 @@ export async function fixCrash() {
   await txLock.release()
 }
 
+function createDocLock(...args) {
+  return ModelWrapper.createDocLock(...args)
+}
+
 export default function MongoTx(options) {
   function createTx(name, fn) {
     const txMgr = new TxManager(name, options)
@@ -174,7 +178,10 @@ export default function MongoTx(options) {
     }
     return txMgr
   }
-  createTx.options = options
-  createTx.fixCrash = fixCrash
+  Object.assign(createTx, {
+    options,
+    fixCrash,
+    createDocLock,
+  })
   return createTx
 }
