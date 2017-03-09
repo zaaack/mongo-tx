@@ -1,7 +1,7 @@
 # mongo-tx
 A flexible &amp; extensible mongodb transaction library.
 
-[![Build Status](https://travis-ci.org/zaaack/mongo-tx.svg?branch=master)](https://travis-ci.org/zaaack/mongo-tx) [![npm](https://img.shields.io/npm/v/mongo-tx.svg)]() [![npm](https://img.shields.io/npm/dm/mongo-tx.svg)]()
+[![Build Status](https://travis-ci.org/zaaack/mongo-tx.svg?branch=master)](https://travis-ci.org/zaaack/mongo-tx) [![npm](https://img.shields.io/npm/v/mongo-tx.svg)](https://www.npmjs.com/package/mongo-tx) [![npm](https://img.shields.io/npm/dm/mongo-tx.svg)](https://www.npmjs.com/package/mongo-tx)
 ## Install
 
 `npm i --save mongo-tx`
