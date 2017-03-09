@@ -13,7 +13,7 @@ or
 ## How to
 
 ### Intro
-When you create a transaction, this library will create a lock of the transaction name, and You need to use model wrappers to modify data during transactions, each model wrapper would create lock and snapshot before created/modified/removed one single document, after all operations of these documents in this transaction have succeeded, transaction manager will remove all snapshots and release all locks (committing). If error happend in this transaction, all changed documents will be replaced by snapshots and locks will also be released ().
+When you create a transaction, this library will create a lock of the transaction name, and You need to use model wrappers to modify data during transactions, each model wrapper would create lock and snapshot before created/modified/removed one single document, after all operations of these documents in this transaction have succeeded, transaction manager will remove all snapshots and release all locks (committing). If error happend in this transaction, all changed documents will be replaced by snapshots and locks will also be released (rollingback).
 
 ### Lock
 Built-in lock is implemented by mongo's unique key, and using [jdarling/MongoMQ](https://github.com/jdarling/MongoMQ) to create a waiting lock. You can create your own lock by redis, ssdb or other library.
