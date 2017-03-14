@@ -10,8 +10,7 @@ const pFs = pify(fs)
 
 function getTimeoutError(name, expire, e) {
   return new LockedWaitTimeoutError(
-    `${name}(wait timeout: ${
-      (new Date()).toISOString()} >= ${new Date(expire).toISOString()})`, e)
+    `${name}(wait timeout: ${new Date(expire).toISOString()})`, e)
 }
 
 const queueMsgName = name => `${name}:release`

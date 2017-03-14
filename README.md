@@ -37,11 +37,23 @@ import mongoTx from 'mongo-tx'
 import createMongoModel from 'mongo-tx/lib/implements/create-mongo-model'
 import createMongoLock from 'mongo-tx/lib/implements/create-mongo-lock'
 
-const runTx = mongoTx({
+const runTx = mongoTx({ // mongoTx options
   createModel: createMongoModel({ db: nativeDb }),
   createLock: createMongoLock({ db: nativeDb, wait: true }), // wait is true: wait until current release is release instead of throw an error
+  txColName: 'tx_manager', // collection name of transactions, default `tx_manager`
+  commitRetry: 3, // commit retry times, default is 3
+  commitInterval: 300, // commit retry interval, default is 300ms
+  rollbackRetry: 3, // rollback retry times, default is 3
+  rollbackInterval: 300, // rollback retry interval, default is 300ms
+  lockTxName: true, // whether create a lock for the transaction name, this would cause transactions with the same name runs serially, default is true
 })
 
+/**
+ * @param {string|array} txName can be an array to create multi locks for txName
+ * @param {object} options optional, would override mongoTx options
+ * @param {function} fn async function to run your transtaion
+ * @type {[type]}
+ */
 await runTx('some_transfer', async tx => {
   const TxAccounts = tx.wrap('accounts')
   const acc1 = await TxAccounts.findOne({name: 'u1'})
@@ -65,6 +77,10 @@ await runTx('some_transfer', async tx => {
 
 // other code
 ```
+
+## Tips
+
+1. runTx would only locks before documents' first modification, if you need to lock the query operation, you can call `await TxModel.lock(docId)` before the query, it's ok to call `lock` multi times, it would only work at the first time.
 
 For more use case please see test folder.
 

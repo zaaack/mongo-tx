@@ -3,7 +3,7 @@ import { CommitError, RollbackError, RetryableError, LockedError } from './error
 import { sleep, debug, randomStr } from './utils'
 
 const defaults = {
-  txModelName: 'tx_manager',
+  txColName: 'tx_manager',
   createModel: null,
   createLock: null,
   txTimeout: 0,
@@ -11,31 +11,42 @@ const defaults = {
   commitInterval: 300,
   rollbackRetry: 3,
   rollbackInterval: 300,
+  lockTxName: true,
 }
 
 let _txModel = null
 
 class TxManager {
   constructor(nameOrTx, options) {
+    let lockNames = []
     if (typeof nameOrTx === 'object' && nameOrTx._id) {
       this.tx = nameOrTx
-      this.name = nameOrTx._id
+      this.name = nameOrTx.name
+      lockNames = nameOrTx.locks
     } else if (typeof nameOrTx === 'string') {
       this.name = nameOrTx
+      lockNames.push(this.name)
+    } else if (Array.isArray(nameOrTx)) {
+      this.name = nameOrTx.join(':')
+      lockNames = lockNames.concat(nameOrTx)
     } else {
       throw new Error('Illegal parameter nameOrTx:', nameOrTx)
     }
-    this.options = Object.assign({}, defaults, options)
-    let { txTimeout, createModel, createLock, txModelName } = this.options
+    this.options = options = Object.assign({}, defaults, options)
+    let { txTimeout, createModel, createLock, txColName, lockTxName } = this.options
     // if (txTimeout <= 0) { // TODO: timeout ?
     //   txTimeout = Infinity
     // }
     if (!_txModel) {
-      _txModel = createModel(txModelName)
+      _txModel = createModel(txColName)
     }
     this.txModel = _txModel
-    this.txLock = createLock('transaction:' + this.name)
+    this.txLocks = []
+    if (lockTxName) {
+      this.txLocks = lockNames.map(lockName => createLock('transaction:' + lockName))
+    }
     this.models = []
+    this.lockNames = lockNames
   }
 
   wrap(model) {
@@ -58,14 +69,15 @@ class TxManager {
   }
 
   async start() {
-    await this.txLock.lock()
+    await Promise.all(this.txLocks.map(tl => tl.lock()))
+
     debug('tx:', this.name, 'start')
     const { timeout } = this.options
     this.tx = await this.txModel.create({
-      _id: this.name,
       name: this.name,
       // expire: new Date(Date.now() + timeout),
       snapshots: {},
+      locks: this.lockNames,
       state: 'running',
     })
   }
@@ -134,8 +146,8 @@ class TxManager {
 
   async finish() {
     // await this.updateTxState('finished')
-    await this.txModel.findOneAndRemove({ _id: this.name })
-    await this.txLock.release()
+    await this.txModel.findOneAndRemove({ _id: this.tx._id })
+    await Promise.all(this.txLocks.map(tl => tl.release()))
   }
 }
 
@@ -144,8 +156,8 @@ class TxManager {
  * @return
  */
 async function fixCrash() {
-  let { createModel, createLock, txModelName } = this.options
-  _txModel = _txModel || createModel(txModelName)
+  let { createModel, createLock, txColName } = this.options
+  _txModel = _txModel || createModel(txColName)
   const txModel = _txModel
   const txLock = createLock('MongoTx:fixCrash')
   await txLock.lock()
@@ -166,13 +178,14 @@ async function fixCrash() {
   await txLock.release()
 }
 
-function createDocLock(...args) {
-  return ModelWrapper.createDocLock(...args)
-}
-
 export default function MongoTx(options) {
-  function createTx(name, fn) {
-    const txMgr = new TxManager(name, options)
+  function createTx(name, fn, _options) {
+    if (typeof _options === 'function') {
+      let tmp = _options
+      _options = fn
+      fn = tmp
+    }
+    const txMgr = new TxManager(name, Object.assign({}, options, _options))
     if (fn) {
       return txMgr.run(fn)
     }
@@ -181,7 +194,7 @@ export default function MongoTx(options) {
   Object.assign(createTx, {
     options,
     fixCrash,
-    createDocLock,
+    createDocLock: (...args) => ModelWrapper.createDocLock(...args, options),
   })
   return createTx
 }

@@ -13,7 +13,7 @@ export default class ModelWrapper {
     this.locks = {}
   }
 
-  static createDocLock(colName, docId, options = this.options) {
+  static createDocLock(colName, docId, options) {
     const { createLock } = options
     return createLock(`document:${colName}_${docId}`)
   }
@@ -26,10 +26,17 @@ export default class ModelWrapper {
     return `snapshots.${this.name()}_${docId}`
   }
 
-  async snapshot(doc, action = 'update') {
+  async snapshotAndLock(doc, action = 'update') {
     const txId = this.tx._id
-    if (this.tx.snapshots[`${this.name()}_${doc._id}`]) {
+    const snap = this.tx.snapshots[`${this.name()}_${doc._id}`]
+    if (snap && snap.action !== 'lock') {
       return
+    }
+    const id = doc._id.toString()
+    if (!(id in this.locks)) { // only create lock once
+      const lock = this.createLock(id.toString())
+      await lock.lock()
+      this.locks[id] = lock
     }
     this.tx = await this.txModel.findOneAndUpdate({ _id: txId }, {
       $set: {
@@ -54,12 +61,7 @@ export default class ModelWrapper {
   }
 
   async lock(id) {
-    id = id.toString()
-    if (!(id in this.locks)) {
-      const lock = this.createLock(id.toString())
-      await lock.lock()
-      this.locks[id] = lock
-    }
+    return this.snapshotAndLock({ _id: id }, 'lock')
   }
 
   async release(id) {
@@ -69,8 +71,7 @@ export default class ModelWrapper {
 
   async create(doc) {
     doc._id = ObjectId()
-    await this.lock(doc._id)
-    await this.snapshot(doc, 'create')
+    await this.snapshotAndLock(doc, 'create')
     doc = await this.model.create(doc)
     return doc
   }
@@ -78,16 +79,14 @@ export default class ModelWrapper {
   async findOneAndUpdate(match, updateDocument, options) {
     const doc = await this.model.findOne(match)
     if (!doc) return doc
-    await this.lock(doc._id)
-    await this.snapshot(doc, 'update')
+    await this.snapshotAndLock(doc, 'update')
     return await this.model.findOneAndUpdate(match, updateDocument, options)
   }
 
   async findOneAndRemove(match, options) {
     const doc = await this.model.findOne(match)
     if (!doc) return doc
-    await this.lock(doc._id)
-    await this.snapshot(doc, 'remove')
+    await this.snapshotAndLock(doc, 'remove')
     await this.model.findOneAndRemove(match, options)
     return doc
   }
@@ -127,6 +126,7 @@ export default class ModelWrapper {
           case 'remove':
             await this.model.create(doc)
             break
+          case 'lock': // just removeSnap and release
           default:
         }
         await this.removeSnap(doc._id)
