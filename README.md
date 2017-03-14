@@ -80,7 +80,7 @@ await runTx('some_transfer', async tx => {
 
 ## Tips
 
-1. runTx would only locks before documents' first modification, if you need to lock the query operation, you can call `await TxModel.lock(docId)` before the query, it's ok to call `lock` multi times, it would only work at the first time.
+1. runTx would only lock before documents' first modification in default, if you need to lock the query operation, you can call `await TxModel.lock(docId)` before the query, it's ok to lock multi times, it would only work at the first time.
 
 For more use case please see test folder.
 

@@ -4,8 +4,9 @@
   "description": "A flexible & extensible mongodb transaction library",
   "main": "lib/tx-manager.js",
   "scripts": {
+    "start": "cross-env NODE_ENV=development DEBUG=mongo-tx* npm test",
     "build": "cross-env NODE_ENV=production babel -d ./lib -s false -D ./src && git add -A",
-    "test": "cross-env NODE_ENV=development DEBUG=mongo-tx* ava --serial",
+    "test": "ava --serial",
     "cover": "cross-env NODE_ENV=development nyc ava --serial"
   },
   "author": "zaaack",

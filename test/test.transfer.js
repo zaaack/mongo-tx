@@ -55,8 +55,17 @@ async function transfer(_createTx = createTx, throws) {
   await _createTx('transfer')
     .run(async tx => {
       const TxAccounts = tx.wrap(Accounts)
-      const acc1 = await TxAccounts.findOne({name: 'u1'})
-      const acc2 = await TxAccounts.findOne({name: 'u2'})
+      let [acc1, acc2] = await Promise.all([
+        TxAccounts.findOne({name: 'u1'}),
+        TxAccounts.findOne({name: 'u2'}),
+      ])
+      // lock before query
+      await Promise.all([TxAccounts.lock(acc1._id), TxAccounts.lock(acc2._id)])
+      // update safe query with lock
+      ;[acc1, acc2] = await Promise.all([
+        TxAccounts.findOne({name: 'u1'}),
+        TxAccounts.findOne({name: 'u2'}),
+      ])
       await TxAccounts.findOneAndUpdate({
         name: 'u1',
       }, {
