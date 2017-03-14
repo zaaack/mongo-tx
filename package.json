@@ -1,6 +1,6 @@
 {
   "name": "mongo-tx",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "A flexible & extensible mongodb transaction library",
   "main": "lib/tx-manager.js",
   "scripts": {
