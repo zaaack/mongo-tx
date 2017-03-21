@@ -56,8 +56,14 @@ const runTx = mongoTx({ // mongoTx options
  */
 await runTx('some_transfer', async tx => {
   const TxAccounts = tx.wrap('accounts')
-  const acc1 = await TxAccounts.findOne({name: 'u1'})
-  const acc2 = await TxAccounts.findOne({name: 'u2'})
+  let acc1 = await TxAccounts.findOne({name: 'u1'}, {_id: 1})
+  let acc2 = await TxAccounts.findOne({name: 'u2'}, {_id: 1})
+  // manually lock before query or auto lock before modify like `findOneAndUpdate`
+  await TxAccounts.lock(acc1._id)
+  await TxAccounts.lock(acc2._id)
+  acc1 = await TxAccounts.findOne({_id: acc1._id})
+  acc2 = await TxAccounts.findOne({_id: acc2._id})
+  
   await TxAccounts.findOneAndUpdate({
     name: 'u1',
   }, {
