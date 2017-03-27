@@ -1,6 +1,6 @@
 {
   "name": "mongo-tx",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A flexible & extensible mongodb transaction library",
   "main": "lib/tx-manager.js",
   "scripts": {
@@ -12,7 +12,13 @@
   "author": "zaaack",
   "repository": "zaaack/mongo-tx",
   "license": "ISC",
-  "bundledDependencies": ["debug", "lodash.result", "mongodb", "mongomq", "babel-runtime"],
+  "bundledDependencies": [
+    "debug",
+    "lodash.result",
+    "mongodb",
+    "mongomq",
+    "babel-runtime"
+  ],
   "dependencies": {
     "debug": "^2.6.0",
     "lodash.result": "^4.5.2",
