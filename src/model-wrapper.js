@@ -76,11 +76,12 @@ export default class ModelWrapper {
     return this.model.find({ _id: { $in: docs.map(doc => doc._id) } })
   }
   /**
-   * Deprecate, using lockForQuery instead
+   * Deprecated, using lockForQuery instead.
    * @param  {ObjectId}  id
    * @return {Promise}
    */
   async lock(id) {
+    console.log('txModel.lock(id) Deprecated, using txModel.lockForQuery(id) instead.')
     return this.lockForQuery(id)
   }
 
