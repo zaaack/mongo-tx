@@ -35,7 +35,7 @@ test.before(async t => {
   await nativeDb.dropDatabase()
   await db.connect()
   nativeDb = await db.connection()
-  createTx = mongoTx({
+  createTx = await mongoTx({
     createModel: createMongoModel({ db: nativeDb }),
     createLock: createMongoLock({
       db: nativeDb,
@@ -51,35 +51,32 @@ test.before(async t => {
   }
 })
 
-async function transfer(_createTx = createTx, throws) {
-  await _createTx('transfer')
-    .run(async tx => {
-      const TxAccounts = tx.wrap('accounts')
-      let [acc1, acc2] = await Promise.all([
-        TxAccounts.findOne({name: 'u1'}),
-        TxAccounts.findOne({name: 'u2'}),
-      ])
-      await Promise.all([TxAccounts.lock(acc1._id), TxAccounts.lock(acc2._id)])
-      ;[acc1, acc2] = await Promise.all([
-        TxAccounts.findOne({name: 'u1'}),
-        TxAccounts.findOne({name: 'u2'}),
-      ])
-      await TxAccounts.findOneAndUpdate({
-        name: 'u1',
-      }, {
-        $set: {
-          money: acc1.money - 100,
-        },
-      })
-      throws && throws()
-      await TxAccounts.findOneAndUpdate({
-        name: 'u2',
-      }, {
-        $set: {
-          money: acc2.money + 100,
-        },
-      })
+async function transfer(runTx = createTx, throws) {
+  await runTx('transfer', async tx => {
+    const TxAccounts = tx.wrap('accounts')
+    let acc1 = await TxAccounts.findOne({name: 'u1'})
+    let acc2 = await TxAccounts.findOne({name: 'u2'})
+    // Loop lock would cause all fail !
+    // let [acc1, acc2] = await Promise.all([
+    //   TxAccounts.findOne({name: 'u1'}),
+    //   TxAccounts.findOne({name: 'u2'}),
+    // ])
+    await TxAccounts.findOneAndUpdate({
+      name: 'u1',
+    }, {
+      $set: {
+        money: acc1.money - 100,
+      },
     })
+    throws && throws()
+    await TxAccounts.findOneAndUpdate({
+      name: 'u2',
+    }, {
+      $set: {
+        money: acc2.money + 100,
+      },
+    })
+  })
 }
 async function transferWithError() {
   try {
@@ -119,14 +116,14 @@ test('test locked error', async t => {
   t.is(acc2.get('money'), 1300, 'u2\'s money should be 1300')
 })
 
-test('test locked wait', async t => {
+test('test wait lock', async t => {
   const nativeDb = await db.connection()
-  const createWaitTx = mongoTx({
+  const createWaitTx = await mongoTx({
     createModel: createMongoModel({ db: nativeDb }),
     createLock: createMongoLock({ db: nativeDb, wait: true }),
   })
   const tasks = []
-  for (var i = 0; i < 20; i++) {
+  for (let i = 0; i < 20; i++) {
     tasks.push(transfer(createWaitTx))
   }
   await Promise.all(tasks)

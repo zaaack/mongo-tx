@@ -11,7 +11,7 @@ const defaults = {
   commitInterval: 300,
   rollbackRetry: 3,
   rollbackInterval: 300,
-  lockTxName: true,
+  lockTxName: false,
 }
 
 let _txModel = null
@@ -179,22 +179,25 @@ async function fixCrash() {
 }
 
 export default function MongoTx(options) {
-  function createTx(name, fn, _options) {
+  async function runTx(name, fn, _options) {
     if (typeof _options === 'function') {
       let tmp = _options
       _options = fn
       fn = tmp
     }
-    const txMgr = new TxManager(name, Object.assign({}, options, _options))
+    options = Object.assign({}, options, _options)
+    options.createModel = await options.createModel
+    options.createLock = await options.createLock
+    const txMgr = new TxManager(name, options)
     if (fn) {
       return txMgr.run(fn)
     }
     return txMgr
   }
-  Object.assign(createTx, {
+  Object.assign(runTx, {
     options,
     fixCrash,
     createDocLock: (...args) => ModelWrapper.createDocLock(...args, options),
   })
-  return createTx
+  return runTx
 }

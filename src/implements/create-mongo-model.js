@@ -36,9 +36,9 @@ export default ({
         return doc
       },
 
-      async find(match) {
+      async find(match, ...args) {
         const col = await this.getCol()
-        return await col.find(match).toArray()
+        return await col.find(match, ...args).toArray()
       },
 
       async index(field, options) {
@@ -46,9 +46,9 @@ export default ({
         return col.createIndex(field, options)
       },
 
-      async findOne(match) {
+      async findOne(match, ...args) {
         const col = await this.getCol()
-        return col.find(match).limit(1).next()
+        return col.find(match, ...args).limit(1).next()
       },
 
       async findOneAndUpdate(match, updateDocument, options) {

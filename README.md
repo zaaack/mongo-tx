@@ -13,11 +13,17 @@ or
 ## How to
 
 ### Intro
-When you create a transaction, this library will create a lock of the transaction name, and You need to use model wrappers to modify data during transactions, each model wrapper would create lock and snapshot before created/modified/removed one single document, after all operations of these documents in this transaction have succeeded, transaction manager will remove all snapshots and release all locks (committing). If error happend in this transaction, all changed documents will be replaced by snapshots and locks will also be released (rollingback).
+When you create a transaction and run it, You need to use model wrappers to modify data during transactions, each model wrapper would create lock and snapshot before find/findOne/create/modifie/remove documents, after all operations of these documents in this transaction have succeeded, transaction manager will remove all snapshots and release all locks (committing). If error happened in this transaction, all changed documents will be replaced by snapshots and locks will also be released (rollingback).
 
 ### Lock
 Built-in lock is implemented by mongo's unique key, and using [jdarling/MongoMQ](https://github.com/jdarling/MongoMQ) to create a waiting lock. You can create your own lock by redis, ssdb or other library.
-> NOTICE: This kind of lock won't work like any relational database, you need to manually acquire a lock to make sure it is a synchronized operation. If you need to make sure "the locked document" in transaction is also locked in any other place, you'd better create a transaction for it, or acquire a document lock before modify it:
+
+**NOTICE:**
+
+1. This kind of lock won't work like any relational database, you need to manually acquire a lock to make sure it's a synchronized operation. If you need to make sure "the locked document" in transaction is also locked in any other place, you'd better create a transaction for it, or acquire a document lock:
+2. Waiting lock is not safe as you expected, it would fail in many cases, like too much transactions using same lock to cause time out, loop locks cause dead lock and time out (tx1 need lock acc1 & acc2, it has locked acc1; tx2 need lock acc2 & acc1, and it has locked acc2, then they would both fail with time out error), e.g. Just make sure you know waiting lock would fail.
+
+
 ```js
 const lock = runTx.createDocLock(colName: string, docId: ObjectId|string)
 await lock.lock()
@@ -45,7 +51,7 @@ const runTx = mongoTx({ // mongoTx options
   commitInterval: 300, // commit retry interval, default is 300ms
   rollbackRetry: 3, // rollback retry times, default is 3
   rollbackInterval: 300, // rollback retry interval, default is 300ms
-  lockTxName: true, // whether create a lock for the transaction name, this would cause transactions with the same name runs serially, default is true
+  lockTxName: false, // whether create a lock for the transaction name, this would cause transactions with the same name runs serially, default is false
 })
 
 /**
@@ -58,12 +64,7 @@ await runTx('some_transfer', async tx => {
   const TxAccounts = tx.wrap('accounts')
   let acc1 = await TxAccounts.findOne({name: 'u1'}, {_id: 1})
   let acc2 = await TxAccounts.findOne({name: 'u2'}, {_id: 1})
-  // manually lock before query or auto lock before modify like `findOneAndUpdate`
-  await TxAccounts.lock(acc1._id)
-  await TxAccounts.lock(acc2._id)
-  acc1 = await TxAccounts.findOne({_id: acc1._id})
-  acc2 = await TxAccounts.findOne({_id: acc2._id})
-  
+
   await TxAccounts.findOneAndUpdate({
     name: 'u1',
   }, {
@@ -84,9 +85,59 @@ await runTx('some_transfer', async tx => {
 // other code
 ```
 
-## Tips
+## TxModel
 
-1. runTx would only lock before documents' first modification in default, if you need to lock the query operation, you can call `await TxModel.lock(docId)` before the query, it's ok to lock multi times, it would only work at the first time.
+```js
+
+class TxModel {
+  /**
+   * insert document
+   * @param  {object} doc
+   * @return {} document with _id     
+   */
+  create(doc: object) {
+    // ...
+  },
+  /**
+   * find documents
+   * @param  {object} match query expression
+   * @return {Array<object>} documents
+   */
+  find(match) {
+    // ...
+  },
+  /**
+   * find one document
+   * @param  {object} match query expression
+   * @return {object} document
+   */
+  findOne(match) {
+    // ...
+  },
+  /**
+   * findOneAndUpdate
+   * @param  {object} match query expression
+   * @param  {object} update  update expression
+   * @param  {object} options see native-mongo-driver
+   * @return {object}         original doc or new doc
+   */
+  findOneAndUpdate(match, update, options) {
+    // ...
+  },
+  /**
+   * findOneAndRemove
+   * @param  {object} match query expression
+   * @param  {object} options see native-mongo-driver
+   * @return {object}         original doc
+   */
+  findOneAndRemove(match, options) {
+    // ...
+  },
+}
+
+```
+
+## Tips
 
 For more use case please see test folder.
 

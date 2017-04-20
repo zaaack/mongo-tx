@@ -47,10 +47,10 @@ class Lock {
     this.options = options
   }
 
-  async lock(start = Date.now()) {
+  async lock({ wait = this.options.wait, start = Date.now() } = {}) {
     const {
       collectionName, writeConcern,
-      db, notDelete, wait, queue,
+      db, notDelete, queue,
       maxWaitTime, maxLockTime
     } = this.options
     if (!col) {
@@ -89,7 +89,7 @@ class Lock {
             // await sleep(300)
             await waitForRelease(queue, this.name, start + maxWaitTime, e)
             debug('lock again')
-            await this.lock(start)
+            await this.lock({ start, wait })
           } else {
             // there is currently a valid lock in the datastore
             throw new LockedError(this.name, e)

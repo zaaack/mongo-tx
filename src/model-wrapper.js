@@ -29,15 +29,18 @@ export default class ModelWrapper {
   async snapshotAndLock(doc, action = 'update') {
     const txId = this.tx._id
     const snap = this.tx.snapshots[`${this.name()}_${doc._id}`]
-    if (snap && snap.action !== 'lock') {
+    // only create lock once for non-lock snapshot
+    if (snap && snap.action !== 'query') {
       return
     }
+    // lock
     const id = doc._id.toString()
-    if (!(id in this.locks)) { // only create lock once
+    if (!(id in this.locks)) {
       const lock = this.createLock(id.toString())
       await lock.lock()
       this.locks[id] = lock
     }
+    // take snap
     this.tx = await this.txModel.findOneAndUpdate({ _id: txId }, {
       $set: {
         [this._snapId(doc._id)]: {
@@ -52,16 +55,37 @@ export default class ModelWrapper {
     debug('this.tx', this.tx)
   }
 
-  async findOne(match) {
-    return this.model.findOne(match)
+  async findOne(match, ...args) {
+    let _id
+    if (match._id) {
+      _id = match._id
+    } else {
+      const doc = await this.model.findOne(match, ...args)
+      if (!doc) return doc
+      _id = doc._id
+    }
+    await this.lockForQuery(_id)
+    return this.model.findOne({ _id })
   }
 
-  async find(match) {
-    return this.model.find(match)
+  async find(match, ...args) {
+    let docs = await this.model.find(match, ...args)
+    docs = docs.filter(f => f)
+    await Promise.all(docs.map(
+      doc => this.lockForQuery(doc._id)))
+    return this.model.find({ _id: { $in: docs.map(doc => doc._id) } })
   }
-
+  /**
+   * Deprecate, using lockForQuery instead
+   * @param  {ObjectId}  id
+   * @return {Promise}
+   */
   async lock(id) {
-    return this.snapshotAndLock({ _id: id }, 'lock')
+    return this.lockForQuery(id)
+  }
+
+  async lockForQuery(id) {
+    return this.snapshotAndLock({ _id: id }, 'query')
   }
 
   async release(id) {
@@ -69,10 +93,10 @@ export default class ModelWrapper {
     await lock.release()
   }
 
-  async create(doc) {
+  async create(doc, ...args) {
     doc._id = ObjectId()
     await this.snapshotAndLock(doc, 'create')
-    doc = await this.model.create(doc)
+    doc = await this.model.create(doc, ...args)
     return doc
   }
 
@@ -126,7 +150,7 @@ export default class ModelWrapper {
           case 'remove':
             await this.model.create(doc)
             break
-          case 'lock': // just removeSnap and release
+          case 'query': // just removeSnap and release
           default:
         }
         await this.removeSnap(doc._id)
